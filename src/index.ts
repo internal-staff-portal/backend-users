@@ -5,6 +5,9 @@ import {
 } from "@internal-staff-portal/backend-shared";
 import { Router } from "express";
 
+//export model and interfaces
+export { IShortUser, IUser, UserModel } from "./Models/UserModel";
+
 //options for the Wrapper
 interface ModuleOptions {}
 
@@ -15,10 +18,10 @@ export default function ModuleWrapper(
   //the constructor
   return function (core: CoreValues): Module {
     //define module path
-    const path = "/TModule";
+    const path = "/users";
 
     //create the router
-    const TModuleRouter = Router();
+    const usersRouter = Router();
 
     //create the socket.io namespace
     const namespace = core.createNamespace(path);
@@ -27,9 +30,9 @@ export default function ModuleWrapper(
 
     //return the actual module
     return {
-      name: "TModule",
+      name: "users",
       path: path,
-      router: TModuleRouter,
+      router: usersRouter,
     };
   };
 }
