@@ -26,7 +26,10 @@ export default function ModuleWrapper(
     //create the socket.io namespace
     const namespace = core.createNamespace(path);
 
-    //the module code here
+    //test route (will be removed)
+    usersRouter.get("/test", (req, res) => {
+      res.send("Test from users module!");
+    });
 
     //return the actual module
     return {
