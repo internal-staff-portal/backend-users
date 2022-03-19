@@ -122,7 +122,7 @@ export default function ModuleWrapper(
             });
 
           //send id confirmation
-          return core.auth.sendData(res, 403, {
+          return core.auth.sendData(res, 200, {
             err: false,
             status: 0,
             data: publicData(deletedUser),
