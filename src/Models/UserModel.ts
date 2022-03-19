@@ -5,6 +5,7 @@ import { v4 } from "uuid";
 export interface IShortUser {
   _id: string;
   email: string;
+  privileges: "user" | "mod" | "admin";
   username: string;
   roles: string[];
 }
@@ -13,7 +14,6 @@ export interface IShortUser {
 export interface IUser extends IShortUser {
   active: boolean;
   hashedPassword: string;
-  privileges: "user" | "mod" | "admin";
 }
 
 //the user schema
@@ -40,7 +40,7 @@ const UserSchema = new Schema<IUser>({
   privileges: {
     type: String,
     required: true,
-    default: "user"
+    default: "user",
   },
   username: {
     type: String,

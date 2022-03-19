@@ -155,6 +155,7 @@ export function publicData(user: IUser): IShortUser {
   return {
     _id: user._id,
     email: user.email,
+    privileges: user.privileges,
     roles: user.roles,
     username: user.username,
   };
