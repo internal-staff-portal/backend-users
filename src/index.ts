@@ -93,6 +93,54 @@ export default function ModuleWrapper(
       },
     );
 
+    //endpoint for deleting a user
+    usersRouter.delete(
+      "/delete/:id",
+      core.auth.validateMiddleware,
+      async (req, res) => {
+        try {
+          //find the issuer from db
+          const issuer = <IUser>await UserModel.findById(res.locals.payload.id);
+
+          //check if issuer has permissions
+          if (!isPrivileged(issuer, "admin"))
+            return core.auth.sendData(res, 403, {
+              err: true,
+              status: 1,
+              data: null,
+            });
+
+          //find user and delete user
+          const deletedUser = await UserModel.findByIdAndDelete(req.params.id);
+
+          //check if a user with this id existed
+          if (!deletedUser)
+            return core.auth.sendData(res, 404, {
+              err: true,
+              status: 2,
+              data: null,
+            });
+
+          //send id confirmation
+          return core.auth.sendData(res, 403, {
+            err: false,
+            status: 0,
+            data: publicData(deletedUser),
+          });
+        } catch (err) {
+          //log error
+          core.logger("warn", String(err));
+
+          //send error to client
+          return core.auth.sendData(res, 500, {
+            err: true,
+            status: 5,
+            data: null,
+          });
+        }
+      },
+    );
+
     //return the actual module
     return {
       name: "users",
