@@ -28,11 +28,6 @@ export default function ModuleWrapper(
     //create the socket.io namespace
     const namespace = core.createNamespace(path);
 
-    //test route (will be removed)
-    usersRouter.get("/test", (req, res) => {
-      res.send("Test from users module!");
-    });
-
     //endpoint for creating new users
     usersRouter.post(
       "/createUser",
@@ -40,13 +35,21 @@ export default function ModuleWrapper(
       async (req, res) => {
         try {
           //find the issuer from db
-          const issuer = <IUser>await UserModel.findById(res.locals.payload.id);
+          const issuer = await UserModel.findById(res.locals.payload.id);
+
+          //check if issuer exists
+          if (!issuer)
+            return core.auth.sendData(res, 404, {
+              err: true,
+              status: 1,
+              data: null,
+            });
 
           //check if issuer has permissions
           if (!isPrivileged(issuer, "admin"))
             return core.auth.sendData(res, 403, {
               err: true,
-              status: 1,
+              status: 2,
               data: null,
             });
 
@@ -62,7 +65,7 @@ export default function ModuleWrapper(
           if (check)
             return core.auth.sendData(res, 400, {
               err: true,
-              status: 2,
+              status: 3,
               data: null,
             });
 
@@ -93,6 +96,86 @@ export default function ModuleWrapper(
       },
     );
 
+    //endpoint for chaning a users privilege
+    usersRouter.put(
+      "/changePrivileges",
+      core.auth.validateMiddleware,
+      async (req, res) => {
+        try {
+          //find the issuer from db
+          const issuer = await UserModel.findById(res.locals.payload.id);
+
+          //check if issuer exists
+          if (!issuer)
+            return core.auth.sendData(res, 404, {
+              err: true,
+              status: 1,
+              data: null,
+            });
+
+          //check that issuer is not changing own privileges
+          if (req.body.target === issuer._id)
+            return core.auth.sendData(res, 403, {
+              err: true,
+              status: 2,
+              data: null,
+            });
+
+          //check if issuer has higher privilege than new privilege
+          if (!comparePrivilege(issuer.privileges, req.body.privilege))
+            return core.auth.sendData(res, 403, {
+              err: true,
+              status: 3,
+              data: null,
+            });
+
+          //get target from database
+          const target = await UserModel.findById(req.body.target);
+
+          //send error if targer does not exist
+          if (!target)
+            return core.auth.sendData(res, 404, {
+              err: true,
+              status: 4,
+              data: null,
+            });
+
+          //check that target has lower permissions than issuer
+          if (!comparePrivilege(issuer.privileges, target.privileges))
+            return core.auth.sendData(res, 403, {
+              err: true,
+              status: 6,
+              data: null,
+            });
+
+          //change privilege
+          await UserModel.updateOne(
+            { _id: target._id },
+            {
+              $set: { privileges: req.body.privilege },
+            },
+          );
+
+          //send response
+          core.auth.sendData(
+            res,
+            200,
+            publicData(<IUser>await UserModel.findById(target._id)),
+          );
+        } catch (err) {
+          //log error
+          core.logger("warn", String(err));
+
+          //send error to client
+          return core.auth.sendData(res, 500, {
+            err: true,
+            status: 5,
+            data: null,
+          });
+        }
+      },
+    );
+
     //endpoint for deleting a user
     usersRouter.delete(
       "/delete/:id",
@@ -100,13 +183,21 @@ export default function ModuleWrapper(
       async (req, res) => {
         try {
           //find the issuer from db
-          const issuer = <IUser>await UserModel.findById(res.locals.payload.id);
+          const issuer = await UserModel.findById(res.locals.payload.id);
+
+          //check if issuer exists
+          if (!issuer)
+            return core.auth.sendData(res, 404, {
+              err: true,
+              status: 1,
+              data: null,
+            });
 
           //check if issuer has permissions
           if (!isPrivileged(issuer, "admin"))
             return core.auth.sendData(res, 403, {
               err: true,
-              status: 1,
+              status: 2,
               data: null,
             });
 
@@ -171,17 +262,26 @@ export function publicData(user: IUser): IShortUser {
     username: user.username,
   };
 }
+let privilege_levels = {
+  owner: 3,
+  admin: 2,
+  mod: 1,
+  user: 0,
+};
 
 //check if a user is privileged for a certain privilege
 export function isPrivileged(user: IUser, privilege: IUser["privileges"]) {
-  //mapper object for string to number
-  let levels = {
-    owner: 3,
-    admin: 2,
-    mod: 1,
-    user: 0,
-  };
-
   //return if a user is privileged
-  return user && levels[user.privileges] >= levels[privilege];
+  return (
+    user && privilege_levels[user.privileges] >= privilege_levels[privilege]
+  );
+}
+
+//compare 2 privileges
+export function comparePrivilege(
+  privilege1: IUser["privileges"],
+  privilege2: IUser["privileges"],
+) {
+  //return true if privilege1 is higher than privilege2 else return false
+  return privilege_levels[privilege1] > privilege_levels[privilege2];
 }
