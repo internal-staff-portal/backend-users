@@ -111,21 +111,32 @@ export default function ModuleWrapper(
             });
 
           //find user and delete user
-          const deletedUser = await UserModel.findByIdAndDelete(req.params.id);
+          const target = <IUser | null>await UserModel.findById(req.params.id);
 
-          //check if a user with this id existed
-          if (!deletedUser)
+          //check if a user with this id exists
+          if (!target)
             return core.auth.sendData(res, 404, {
               err: true,
               status: 2,
               data: null,
             });
 
+          //check if a user is not owner
+          if (target.privileges === "owner")
+            return core.auth.sendData(res, 403, {
+              err: true,
+              status: 3,
+              data: null,
+            });
+
+          //delete the user
+          await UserModel.findByIdAndDelete(target);
+
           //send id confirmation
           return core.auth.sendData(res, 200, {
             err: false,
             status: 0,
-            data: publicData(deletedUser),
+            data: publicData(target),
           });
         } catch (err) {
           //log error
