@@ -165,6 +165,7 @@ export function publicData(user: IUser): IShortUser {
 export function isPrivileged(user: IUser, privilege: IUser["privileges"]) {
   //mapper object for string to number
   let levels = {
+    owner: 3,
     admin: 2,
     mod: 1,
     user: 0,

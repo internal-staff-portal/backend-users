@@ -5,7 +5,7 @@ import { v4 } from "uuid";
 export interface IShortUser {
   _id: string;
   email: string;
-  privileges: "user" | "mod" | "admin";
+  privileges: "user" | "mod" | "admin" | "owner";
   username: string;
   roles: string[];
 }
